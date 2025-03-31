@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { createCssVariableCompletionData } from './completion/createCssVariableCompletionData';
 import { createAllCompletionItems } from './completion/createAllCompletionItems';
 import { createTypeSpecificCompletions } from './completion/createTypeSpecificCompletions';
@@ -14,9 +15,21 @@ export function activate(context: vscode.ExtensionContext): void {
 	}
 
 	const currentWorkspacePath = workspaceFolders[0].uri.fsPath;
-	const nodeModulesFilePath = path.join(currentWorkspacePath, 'node_modules', '@justeat', 'pie-design-tokens', 'dist', 'jet.css');
+	const designTokensFilePath = path.join(currentWorkspacePath, 'node_modules', '@justeat', 'pie-design-tokens', 'dist', 'jet.css');
+    const pieCssDesignTokensFilePath = path.join(currentWorkspacePath, 'node_modules', '@justeattakeaway', 'pie-css', 'dist', 'index.css');
+    let validTokensFilePath;
 
-	vscode.workspace.openTextDocument(nodeModulesFilePath).then((document: vscode.TextDocument) => {
+	// Check if the file exists before trying to open it
+	if (fs.existsSync(designTokensFilePath)) {
+        validTokensFilePath = designTokensFilePath;
+    } else if (fs.existsSync(pieCssDesignTokensFilePath)) {
+        validTokensFilePath = pieCssDesignTokensFilePath;
+    } else {
+		vscode.window.showErrorMessage('PIE Design System - Could not find pie design tokens file at: ' + designTokensFilePath + ' or ' + pieCssDesignTokensFilePath);
+		return;
+	}
+
+	vscode.workspace.openTextDocument(validTokensFilePath).then((document: vscode.TextDocument) => {
 		vscode.window.setStatusBarMessage('PIE Design System - Located tokens in node_modules 😃', 5000);
 		const data = document.getText();
 
@@ -51,8 +64,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		} else {
 			vscode.window.showErrorMessage('PIE Design System - Failed to create token snippets 😞');
 		}
+	}, error => {
+		vscode.window.showErrorMessage(`PIE Design System - Error opening tokens file: ${error.message}`);
 	});
 }
-
 
 export function deactivate(): void {}
